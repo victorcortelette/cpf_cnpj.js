@@ -1,113 +1,22 @@
 ;(function(commonjs){
-  // Blacklist common values.
   var BLACKLIST = [
-    "00000000000",
-    "11111111111",
-    "22222222222",
-    "33333333333",
-    "44444444444",
-    "55555555555",
-    "66666666666",
-    "77777777777",
-    "88888888888",
-    "99999999999",
-    "12345678909"
-  ];
-
-  var STRICT_STRIP_REGEX = /[.-]/g;
-  var LOOSE_STRIP_REGEX = /[^\d]/g;
-
-  var verifierDigit = function(numbers) {
-    numbers = numbers
-      .split("")
-      .map(function(number){ return parseInt(number, 10); })
-    ;
-
-    var modulus = numbers.length + 1;
-
-    var multiplied = numbers.map(function(number, index) {
-      return number * (modulus - index);
-    });
-
-    var mod = multiplied.reduce(function(buffer, number){
-      return buffer + number;
-    }) % 11;
-
-    return (mod < 2 ? 0 : 11 - mod);
-  };
-
-  var CPF = {};
-
-  CPF.format = function(number) {
-    return this.strip(number).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-  };
-
-  CPF.strip = function(number, strict) {
-    var regex = strict ? STRICT_STRIP_REGEX : LOOSE_STRIP_REGEX;
-    return (number || "").toString().replace(regex, "");
-  };
-
-  CPF.isValid = function(number, strict) {
-    var stripped = this.strip(number, strict);
-
-    // CPF must be defined
-    if (!stripped) { return false; }
-
-    // CPF must have 11 chars
-    if (stripped.length !== 11) { return false; }
-
-    // CPF can't be blacklisted
-    if (BLACKLIST.indexOf(stripped) >= 0) { return false; }
-
-    var numbers = stripped.substr(0, 9);
-    numbers += verifierDigit(numbers);
-    numbers += verifierDigit(numbers);
-
-    return numbers.substr(-2) === stripped.substr(-2);
-  };
-
-  CPF.generate = function(formatted) {
-    var numbers = "";
-
-    for (var i = 0; i < 9; i++) {
-      numbers += Math.floor(Math.random() * 9);
-    }
-
-    numbers += verifierDigit(numbers);
-    numbers += verifierDigit(numbers);
-
-    return (formatted ? this.format(numbers) : numbers);
-  };
-
-  if (commonjs) {
-    module.exports = CPF;
-  } else {
-    window.CPF = CPF;
-  }
-})(typeof(exports) !== "undefined");
-
-;(function(commonjs){
-  // Blacklist common values.
-  var BLACKLIST = [
-    "00000000000000",
-    "11111111111111",
-    "22222222222222",
-    "33333333333333",
-    "44444444444444",
-    "55555555555555",
-    "66666666666666",
-    "77777777777777",
-    "88888888888888",
-    "99999999999999"
+    "00000000000000","11111111111111","22222222222222","33333333333333",
+    "44444444444444","55555555555555","66666666666666","77777777777777",
+    "88888888888888","99999999999999"
   ];
 
   var STRICT_STRIP_REGEX = /[-\/.]/g;
-  var LOOSE_STRIP_REGEX = /[^\d]/g;
+  var LOOSE_STRIP_REGEX = /[^0-9A-Za-z]/g;
+
+  var charToCalcValue = function(c) {
+    return c.charCodeAt(0) - 48;
+  };
 
   var verifierDigit = function(numbers) {
     var index = 2;
-    var reverse = numbers.split("").reduce(function(buffer, number) {
-      return [parseInt(number, 10)].concat(buffer);
+
+    var reverse = numbers.split("").reduce(function(buffer, c) {
+      return [charToCalcValue(c)].concat(buffer);
     }, []);
 
     var sum = reverse.reduce(function(buffer, number) {
@@ -123,25 +32,25 @@
   var CNPJ = {};
 
   CNPJ.format = function(number) {
-    return this.strip(number).replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    return this.strip(number).replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, "$1.$2.$3/$4-$5");
   };
 
   CNPJ.strip = function(number, strict) {
     var regex = strict ? STRICT_STRIP_REGEX : LOOSE_STRIP_REGEX;
-    return (number || "").toString().replace(regex, "");
+    return (number || "").toString().replace(regex, "").toUpperCase();
   };
 
   CNPJ.isValid = function(number, strict) {
     var stripped = this.strip(number, strict);
 
-    // CNPJ must be defined
-    if (!stripped) { return false; }
+    if (!stripped) return false;
+    if (stripped.length !== 14) return false;
 
-    // CNPJ must have 14 chars
-    if (stripped.length !== 14) { return false; }
+    if (!/^\d{2}$/.test(stripped.substr(12, 2))) return false;
 
-    // CNPJ can't be blacklisted
-    if (BLACKLIST.indexOf(stripped) >= 0) { return false; }
+    if (!/^[0-9A-Z]{12}$/.test(stripped.substr(0, 12))) return false;
+
+    if (BLACKLIST.indexOf(stripped) >= 0) return false;
 
     var numbers = stripped.substr(0, 12);
     numbers += verifierDigit(numbers);
@@ -152,9 +61,10 @@
 
   CNPJ.generate = function(formatted) {
     var numbers = "";
+    var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     for (var i = 0; i < 12; i++) {
-      numbers += Math.floor(Math.random() * 9);
+      numbers += chars[Math.floor(Math.random() * chars.length)];
     }
 
     numbers += verifierDigit(numbers);
