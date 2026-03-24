@@ -1,18 +1,60 @@
 ;(function(commonjs){
-  var BLACKLIST = [
+
+  /* ================= CPF ================= */
+
+  var CPF_BLACKLIST = [
+    "00000000000","11111111111","22222222222","33333333333",
+    "44444444444","55555555555","66666666666","77777777777",
+    "88888888888","99999999999","12345678909"
+  ];
+
+  var cpfVerifierDigit = function(numbers) {
+    numbers = numbers.split("").map(function(n){ return parseInt(n, 10); });
+
+    var modulus = numbers.length + 1;
+
+    var sum = numbers.reduce(function(buffer, number, index) {
+      return buffer + (number * (modulus - index));
+    }, 0);
+
+    var mod = sum % 11;
+    return (mod < 2 ? 0 : 11 - mod);
+  };
+
+  var CPF = {};
+
+  CPF.strip = function(number) {
+    return (number || "").toString().replace(/[^\d]/g, "");
+  };
+
+  CPF.isValid = function(number) {
+    var stripped = this.strip(number);
+
+    if (!stripped) return false;
+    if (stripped.length !== 11) return false;
+    if (CPF_BLACKLIST.indexOf(stripped) >= 0) return false;
+
+    var numbers = stripped.substr(0, 9);
+    numbers += cpfVerifierDigit(numbers);
+    numbers += cpfVerifierDigit(numbers);
+
+    return numbers.substr(-2) === stripped.substr(-2);
+  };
+
+
+  /* ================= CNPJ ================= */
+
+  var CNPJ_BLACKLIST = [
     "00000000000000","11111111111111","22222222222222","33333333333333",
     "44444444444444","55555555555555","66666666666666","77777777777777",
     "88888888888888","99999999999999"
   ];
 
-  var STRICT_STRIP_REGEX = /[-\/.]/g;
-  var LOOSE_STRIP_REGEX = /[^0-9A-Za-z]/g;
-
   var charToCalcValue = function(c) {
     return c.charCodeAt(0) - 48;
   };
 
-  var verifierDigit = function(numbers) {
+  var cnpjVerifierDigit = function(numbers) {
     var index = 2;
 
     var reverse = numbers.split("").reduce(function(buffer, c) {
@@ -31,51 +73,39 @@
 
   var CNPJ = {};
 
-  CNPJ.format = function(number) {
-    return this.strip(number).replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, "$1.$2.$3/$4-$5");
+  CNPJ.strip = function(number) {
+    return (number || "").toString().replace(/[^0-9A-Za-z]/g, "").toUpperCase();
   };
 
-  CNPJ.strip = function(number, strict) {
-    var regex = strict ? STRICT_STRIP_REGEX : LOOSE_STRIP_REGEX;
-    return (number || "").toString().replace(regex, "").toUpperCase();
-  };
-
-  CNPJ.isValid = function(number, strict) {
-    var stripped = this.strip(number, strict);
+  CNPJ.isValid = function(number) {
+    var stripped = this.strip(number);
 
     if (!stripped) return false;
     if (stripped.length !== 14) return false;
 
     if (!/^\d{2}$/.test(stripped.substr(12, 2))) return false;
-
     if (!/^[0-9A-Z]{12}$/.test(stripped.substr(0, 12))) return false;
 
-    if (BLACKLIST.indexOf(stripped) >= 0) return false;
+    if (CNPJ_BLACKLIST.indexOf(stripped) >= 0) return false;
 
     var numbers = stripped.substr(0, 12);
-    numbers += verifierDigit(numbers);
-    numbers += verifierDigit(numbers);
+    numbers += cnpjVerifierDigit(numbers);
+    numbers += cnpjVerifierDigit(numbers);
 
     return numbers.substr(-2) === stripped.substr(-2);
   };
 
-  CNPJ.generate = function(formatted) {
-    var numbers = "";
-    var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    for (var i = 0; i < 12; i++) {
-      numbers += chars[Math.floor(Math.random() * chars.length)];
-    }
-
-    numbers += verifierDigit(numbers);
-    numbers += verifierDigit(numbers);
-
-    return (formatted ? this.format(numbers) : numbers);
-  };
+  /* ================= EXPORT ================= */
 
   if (commonjs) {
-    module.exports = CNPJ;
+    module.exports = {
+      CPF: CPF,
+      CNPJ: CNPJ
+    };
   } else {
+    window.CPF = CPF;
     window.CNPJ = CNPJ;
   }
+
 })(typeof(exports) !== "undefined");
