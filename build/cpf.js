@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-extra-semi
 ;(function(commonjs){
   // Blacklist common values.
   var BLACKLIST = [
@@ -69,6 +70,7 @@
   CPF.generate = function(formatted) {
     var numbers = "";
 
+    // eslint-disable-next-line no-plusplus
     for (var i = 0; i < 9; i++) {
       numbers += Math.floor(Math.random() * 9);
     }

@@ -1,62 +1,122 @@
+// eslint-disable-next-line no-extra-semi
 ;(function(commonjs){
-
-  /* ================= CPF ================= */
-
-  var CPF_BLACKLIST = [
-    "00000000000","11111111111","22222222222","33333333333",
-    "44444444444","55555555555","66666666666","77777777777",
-    "88888888888","99999999999","12345678909"
+  // Blacklist common values.
+  var BLACKLIST = [
+    "00000000000",
+    "11111111111",
+    "22222222222",
+    "33333333333",
+    "44444444444",
+    "55555555555",
+    "66666666666",
+    "77777777777",
+    "88888888888",
+    "99999999999",
+    "12345678909"
   ];
 
-  var cpfVerifierDigit = function(numbers) {
-    numbers = numbers.split("").map(function(n){ return parseInt(n, 10); });
+  var STRICT_STRIP_REGEX = /[.-]/g;
+  var LOOSE_STRIP_REGEX = /[^\d]/g;
+
+  var verifierDigit = function(numbers) {
+    numbers = numbers
+      .split("")
+      .map(function(number){ return parseInt(number, 10); })
+    ;
 
     var modulus = numbers.length + 1;
 
-    var sum = numbers.reduce(function(buffer, number, index) {
-      return buffer + (number * (modulus - index));
-    }, 0);
+    var multiplied = numbers.map(function(number, index) {
+      return number * (modulus - index);
+    });
 
-    var mod = sum % 11;
+    var mod = multiplied.reduce(function(buffer, number){
+      return buffer + number;
+    }) % 11;
+
     return (mod < 2 ? 0 : 11 - mod);
   };
 
   var CPF = {};
 
-  CPF.strip = function(number) {
-    return (number || "").toString().replace(/[^\d]/g, "");
+  CPF.format = function(number) {
+    return this.strip(number).replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
   };
 
-  CPF.isValid = function(number) {
-    var stripped = this.strip(number);
+  CPF.strip = function(number, strict) {
+    var regex = strict ? STRICT_STRIP_REGEX : LOOSE_STRIP_REGEX;
+    return (number || "").toString().replace(regex, "");
+  };
 
-    if (!stripped) return false;
-    if (stripped.length !== 11) return false;
-    if (CPF_BLACKLIST.indexOf(stripped) >= 0) return false;
+  CPF.isValid = function(number, strict) {
+    var stripped = this.strip(number, strict);
+
+    // CPF must be defined
+    if (!stripped) { return false; }
+
+    // CPF must have 11 chars
+    if (stripped.length !== 11) { return false; }
+
+    // CPF can't be blacklisted
+    if (BLACKLIST.indexOf(stripped) >= 0) { return false; }
 
     var numbers = stripped.substr(0, 9);
-    numbers += cpfVerifierDigit(numbers);
-    numbers += cpfVerifierDigit(numbers);
+    numbers += verifierDigit(numbers);
+    numbers += verifierDigit(numbers);
 
     return numbers.substr(-2) === stripped.substr(-2);
   };
 
+  CPF.generate = function(formatted) {
+    var numbers = "";
 
-  /* ================= CNPJ ================= */
+    // eslint-disable-next-line no-plusplus
+    for (var i = 0; i < 9; i++) {
+      numbers += Math.floor(Math.random() * 9);
+    }
 
-  var CNPJ_BLACKLIST = [
-    "00000000000000","11111111111111","22222222222222","33333333333333",
-    "44444444444444","55555555555555","66666666666666","77777777777777",
-    "88888888888888","99999999999999"
+    numbers += verifierDigit(numbers);
+    numbers += verifierDigit(numbers);
+
+    return (formatted ? this.format(numbers) : numbers);
+  };
+
+  if (commonjs) {
+    module.exports = CPF;
+  } else {
+    window.CPF = CPF;
+  }
+})(typeof(exports) !== "undefined");
+
+// eslint-disable-next-line no-extra-semi
+;(function(commonjs){
+  // Blacklist common values.
+  var BLACKLIST = [
+    "00000000000000",
+    "11111111111111",
+    "22222222222222",
+    "33333333333333",
+    "44444444444444",
+    "55555555555555",
+    "66666666666666",
+    "77777777777777",
+    "88888888888888",
+    "99999999999999"
   ];
+
+  // Remove apenas os separadores
+  var STRICT_STRIP_REGEX = /[.\-\/]/g;
+
+  // Remove tudo que não pode existir no CNPJ alfanumérico
+  var LOOSE_STRIP_REGEX  = /[^0-9A-Z]/gi;
+
 
   var charToCalcValue = function(c) {
     return c.charCodeAt(0) - 48;
   };
 
-  var cnpjVerifierDigit = function(numbers) {
+  var verifierDigit = function(numbers) {
     var index = 2;
-
     var reverse = numbers.split("").reduce(function(buffer, c) {
       return [charToCalcValue(c)].concat(buffer);
     }, []);
@@ -73,39 +133,54 @@
 
   var CNPJ = {};
 
-  CNPJ.strip = function(number) {
-    return (number || "").toString().replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+  CNPJ.format = function(number) {
+    return this.strip(number).replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, "$1.$2.$3/$4-$5");
   };
 
-  CNPJ.isValid = function(number) {
-    var stripped = this.strip(number);
+  CNPJ.strip = function(number, strict) {
+    var regex = strict ? STRICT_STRIP_REGEX : LOOSE_STRIP_REGEX;
+    return (number || "").toString().replace(regex, "").toUpperCase();
+  };
 
-    if (!stripped) return false;
-    if (stripped.length !== 14) return false;
+  CNPJ.isValid = function(number, strict) {
+    var stripped = this.strip(number, strict);
 
-    if (!/^\d{2}$/.test(stripped.substr(12, 2))) return false;
-    if (!/^[0-9A-Z]{12}$/.test(stripped.substr(0, 12))) return false;
+    // CNPJ must be defined
+    if (!stripped) { return false; }
 
-    if (CNPJ_BLACKLIST.indexOf(stripped) >= 0) return false;
+    // CNPJ must have 14 chars
+    if (stripped.length !== 14) { return false; }
+
+    // CNPJ can't be blacklisted
+    if (BLACKLIST.indexOf(stripped) >= 0) { return false; }
+
+    // Doze primeiros são alfanuméricos (0–9, A–Z) e os dois últimos são numéricos (0-9)
+    if (!/^[0-9A-Z]{12}\d{2}$/.test(stripped)) { return false; }
 
     var numbers = stripped.substr(0, 12);
-    numbers += cnpjVerifierDigit(numbers);
-    numbers += cnpjVerifierDigit(numbers);
+    numbers += verifierDigit(numbers);
+    numbers += verifierDigit(numbers);
 
     return numbers.substr(-2) === stripped.substr(-2);
   };
 
+  CNPJ.generate = function(formatted) {
+    var numbers = "";
 
-  /* ================= EXPORT ================= */
+    // eslint-disable-next-line no-plusplus
+    for (var i = 0; i < 12; i++) {
+      numbers += Math.floor(Math.random() * 9);
+    }
+
+    numbers += verifierDigit(numbers);
+    numbers += verifierDigit(numbers);
+
+    return (formatted ? this.format(numbers) : numbers);
+  };
 
   if (commonjs) {
-    module.exports = {
-      CPF: CPF,
-      CNPJ: CNPJ
-    };
+    module.exports = CNPJ;
   } else {
-    window.CPF = CPF;
     window.CNPJ = CNPJ;
   }
-
 })(typeof(exports) !== "undefined");
