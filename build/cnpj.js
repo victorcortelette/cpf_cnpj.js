@@ -1,12 +1,25 @@
+// eslint-disable-next-line no-extra-semi
 ;(function(commonjs){
+  // Blacklist common values.
   var BLACKLIST = [
-    "00000000000000","11111111111111","22222222222222","33333333333333",
-    "44444444444444","55555555555555","66666666666666","77777777777777",
-    "88888888888888","99999999999999"
+    "00000000000000",
+    "11111111111111",
+    "22222222222222",
+    "33333333333333",
+    "44444444444444",
+    "55555555555555",
+    "66666666666666",
+    "77777777777777",
+    "88888888888888",
+    "99999999999999"
   ];
 
-  var STRICT_STRIP_REGEX = /[-\/.]/g;
-  var LOOSE_STRIP_REGEX = /[^0-9A-Za-z]/g;
+  // Remove apenas os separadores
+  var STRICT_STRIP_REGEX = /[.\-\/]/g;
+
+  // Remove tudo que não pode existir no CNPJ alfanumérico
+  var LOOSE_STRIP_REGEX  = /[^0-9A-Z]/gi;
+
 
   var charToCalcValue = function(c) {
     return c.charCodeAt(0) - 48;
@@ -14,7 +27,6 @@
 
   var verifierDigit = function(numbers) {
     var index = 2;
-
     var reverse = numbers.split("").reduce(function(buffer, c) {
       return [charToCalcValue(c)].concat(buffer);
     }, []);
@@ -43,15 +55,17 @@
   CNPJ.isValid = function(number, strict) {
     var stripped = this.strip(number, strict);
 
-    if (!stripped) return false;
-    if (stripped.length !== 14) return false;
+    // CNPJ must be defined
+    if (!stripped) { return false; }
 
+    // CNPJ must have 14 chars
+    if (stripped.length !== 14) { return false; }
 
-    if (!/^\d{2}$/.test(stripped.substr(12, 2))) return false;
+    // CNPJ can't be blacklisted
+    if (BLACKLIST.indexOf(stripped) >= 0) { return false; }
 
-    if (!/^[0-9A-Z]{12}$/.test(stripped.substr(0, 12))) return false;
-
-    if (BLACKLIST.indexOf(stripped) >= 0) return false;
+    // Doze primeiros são alfanuméricos (0–9, A–Z) e os dois últimos são numéricos (0-9)
+    if (!/^[0-9A-Z]{12}\d{2}$/.test(stripped)) { return false; }
 
     var numbers = stripped.substr(0, 12);
     numbers += verifierDigit(numbers);
@@ -62,10 +76,10 @@
 
   CNPJ.generate = function(formatted) {
     var numbers = "";
-    var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+    // eslint-disable-next-line no-plusplus
     for (var i = 0; i < 12; i++) {
-      numbers += chars[Math.floor(Math.random() * chars.length)];
+      numbers += Math.floor(Math.random() * 9);
     }
 
     numbers += verifierDigit(numbers);
